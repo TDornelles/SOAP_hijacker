@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PLACEHOLDER. SOAPAction: http://tempuri.org/IRouting/RateLandedCost
+     rData element names are the unconfirmed stubbed mapping #1 (InboundFieldMap.cs). -->
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Header>
+    <wsse:Security soap:mustUnderstand="1"
+                   xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" />
+  </soap:Header>
+  <soap:Body>
+    <RateLandedCost xmlns="http://tempuri.org/">
+      <rData>
+        <accountNumber>ACME</accountNumber>
+        <destinationCountryCode>CA</destinationCountryCode>
+        <weight>12.5</weight>
+        <weightUOM>Pounds</weightUOM>
+        <length>10</length>
+        <width>8</width>
+        <height>6</height>
+        <dimensionUOM>Inches</dimensionUOM>
+        <packageValue>250.00</packageValue>
+      </rData>
+    </RateLandedCost>
+  </soap:Body>
+</soap:Envelope>

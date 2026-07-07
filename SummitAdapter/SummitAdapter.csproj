@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- IIS in-process hosting (section 10). web.config's aspNetCore handler is emitted on publish. -->
+    <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
+    <RootNamespace>SummitAdapter</RootNamespace>
+    <AssemblyName>SummitAdapter</AssemblyName>
+  </PropertyGroup>
+
+</Project>

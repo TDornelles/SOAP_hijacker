@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PLACEHOLDER expected response shape for RateLandedCost.
+     Result element names are the unconfirmed stubbed mapping #2 (OutboundFieldMap.cs). -->
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <RateLandedCostResponse xmlns="http://tempuri.org/">
+      <RateLandedCostResult>
+        <FreightCost>42.50</FreightCost>
+        <FuelSurcharge>5.10</FuelSurcharge>
+        <TotalFreightCost>47.60</TotalFreightCost>
+        <DutyValue>12.00</DutyValue>
+        <VatValue>9.40</VatValue>
+        <TotalTaxesDuties>21.40</TotalTaxesDuties>
+        <TotalCost>69.00</TotalCost>
+        <CurrencyCode>USD</CurrencyCode>
+        <BillableWeight>13.0</BillableWeight>
+        <BillableWeightUOM>Pounds</BillableWeightUOM>
+        <DimensionalWeight>11.1</DimensionalWeight>
+      </RateLandedCostResult>
+    </RateLandedCostResponse>
+  </soap:Body>
+</soap:Envelope>
