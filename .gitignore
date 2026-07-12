@@ -17,3 +17,6 @@ publish/
 ## OS
 .DS_Store
 Thumbs.db
+
+## Deploy artifact
+SummitAdapter-publish.zip
