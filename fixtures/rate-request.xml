@@ -1,24 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PLACEHOLDER. SOAPAction: http://tempuri.org/IRouting/RateLandedCost
-     rData element names are the unconfirmed stubbed mapping #1 (InboundFieldMap.cs). -->
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Header>
-    <wsse:Security soap:mustUnderstand="1"
-                   xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" />
-  </soap:Header>
-  <soap:Body>
+<!-- REAL CAPTURE (transcribed 2026-07-12 from GDN_dump/summit_requests/*.png screenshots of a
+     Summit request dated 2025-05-19). This is the ground truth for inbound mapping #1.
+
+     Two redactions vs the screenshot:
+       - WSKEY: the real key (a live credential) is replaced with a dummy GUID.
+       - Nothing else; account 3528 and package data are as captured.
+
+     Notable vs the placeholder fixtures:
+       - Request URL was http://pds.gdnparcel.com/routing/service/soap/dev/routing.svc ("dev"
+         segment, lowercase) — not /Routing/Service/Soap/V2.6/Routing.svc.
+       - SOAP header carries WS-Addressing <Action>, not <wsse:Security>.
+       - rData children are PascalCase in the d4p1 (PDSRouting datacontract) namespace, and the
+         structure is NESTED: header fields, then RatePackageRequests > RatePackageRequest(s),
+         each with RatePackageDetailRequests > RatePackageDetailRequest line items.
+     This file IS the rate-request test fixture; SoapRequestParser parses this exact shape. -->
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Header>
+    <Action s:mustUnderstand="1"
+            xmlns="http://schemas.microsoft.com/ws/2005/05/addressing/none">http://tempuri.org/IRouting/RateLandedCost</Action>
+  </s:Header>
+  <s:Body>
     <RateLandedCost xmlns="http://tempuri.org/">
-      <rData>
-        <accountNumber>ACME</accountNumber>
-        <destinationCountryCode>CA</destinationCountryCode>
-        <weight>12.5</weight>
-        <weightUOM>Pounds</weightUOM>
-        <length>10</length>
-        <width>8</width>
-        <height>6</height>
-        <dimensionUOM>Inches</dimensionUOM>
-        <packageValue>250.00</packageValue>
+      <rData xmlns:d4p1="http://schemas.datacontract.org/2004/07/PDSRouting" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+        <d4p1:WSKEY>00000000-0000-0000-0000-000000000000</d4p1:WSKEY>
+        <d4p1:AccountNumber>3528</d4p1:AccountNumber>
+        <d4p1:RequestDateTime>2025-05-19T10:38:22.2200907-04:00</d4p1:RequestDateTime>
+        <d4p1:SourceOfRequest>WEBSERVICE</d4p1:SourceOfRequest>
+        <d4p1:SubAccountNumber i:nil="true" />
+        <d4p1:JobNumber i:nil="true" />
+        <d4p1:DestinationCountryCode>NZ</d4p1:DestinationCountryCode>
+        <d4p1:DestinationPostalCode>4122</d4p1:DestinationPostalCode>
+        <d4p1:RatePackageRequests>
+          <d4p1:RatePackageRequest>
+            <d4p1:BoxID>0</d4p1:BoxID>
+            <d4p1:Weight>0.45</d4p1:Weight>
+            <d4p1:WeightUOM>Pounds</d4p1:WeightUOM>
+            <d4p1:Length>11</d4p1:Length>
+            <d4p1:Width>7</d4p1:Width>
+            <d4p1:Height>2</d4p1:Height>
+            <d4p1:DimensionUOM>Inches</d4p1:DimensionUOM>
+            <d4p1:Insure>false</d4p1:Insure>
+            <d4p1:InsureAmount>0</d4p1:InsureAmount>
+            <d4p1:InsureCharge>0</d4p1:InsureCharge>
+            <d4p1:FreightCharge>0</d4p1:FreightCharge>
+            <d4p1:PackageValue>12.99</d4p1:PackageValue>
+            <d4p1:CurrencyCode>USD</d4p1:CurrencyCode>
+            <d4p1:RatePackageDetailRequests>
+              <d4p1:RatePackageDetailRequest>
+                <d4p1:CurrencyCode i:nil="true" />
+                <d4p1:HarmonizedCode>8205513060</d4p1:HarmonizedCode>
+                <d4p1:OriginCountryCode>US</d4p1:OriginCountryCode>
+                <d4p1:ProductCode>SUM-900200</d4p1:ProductCode>
+                <d4p1:ProductDescription>THREAD CHASING TAP SET</d4p1:ProductDescription>
+                <d4p1:Quantity>1</d4p1:Quantity>
+                <d4p1:UnitValue>12.99</d4p1:UnitValue>
+              </d4p1:RatePackageDetailRequest>
+            </d4p1:RatePackageDetailRequests>
+          </d4p1:RatePackageRequest>
+        </d4p1:RatePackageRequests>
       </rData>
     </RateLandedCost>
-  </soap:Body>
-</soap:Envelope>
+  </s:Body>
+</s:Envelope>

@@ -10,4 +10,10 @@
     <AssemblyName>SummitAdapter</AssemblyName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Test seam: the test project may build an OperationRegistry with a custom operation set to
+         exercise a ported state (e.g. Ship) ahead of flipping the production registry line. -->
+    <InternalsVisibleTo Include="SummitAdapter.Tests" />
+  </ItemGroup>
+
 </Project>

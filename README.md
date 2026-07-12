@@ -2,10 +2,10 @@
 
 A standalone .NET 8 adapter that sits at the exact URL Summit already calls. It is a **selective
 hijacker**: for the operations that have been ported it translates the legacy WCF **SOAP 1.1**
-request into JSON for our existing Spring Boot service (**GLP**), forwards it, and translates GLP's
-JSON response back into the SOAP shape Summit expects. Every operation it has **not** ported it
-forwards to the legacy service unchanged and relays the response verbatim. Either way Summit sees no
-difference.
+request into JSON for our existing Spring Boot service (**GLP**) and forwards it. The **Rate** family's
+JSON response is translated back into the SOAP shape Summit expects; the **Ship** endpoint's response
+is relayed **verbatim** (status, content type, body) — its shape is GLP's to define. Every operation
+it has **not** ported it forwards to the legacy service unchanged and relays the response verbatim.
 
 The adapter is stateless and **never touches the database** — all data work (including the
 `tbl_consignee` write on ported Route operations) happens in GLP behind it. It ports operations
@@ -47,7 +47,7 @@ ported independently. Current state:
 
 Routing lives entirely in the registry (`SummitAdapter/Dispatch/OperationRegistry.cs`) and endpoint
 paths live in config — nothing is hardcoded in handlers. **To port an operation, flip its one line
-from `PassThrough` to `Translate(…, GlpEndpoint.Ship, writesDb: true)`.** Only the read-only Rate
+from `PassThrough` to `Translate(…, GlpEndpoint.Ship)`.** Only the read-only Rate
 operations are ported today; the new-package-insertion Route operations go live at cutover.
 
 ---
@@ -103,8 +103,9 @@ environment-overridable. No secrets in source.
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `Glp:BaseUrl` | Base URL of the Spring Boot service | `http://localhost:8080` |
-| `Glp:RatePath` | Rate endpoint path (no DB write) | `/api/rate` |
-| `Glp:ShipPath` | Ship endpoint path (writes `tbl_consignee`) | `/api/ship` |
+| `Glp:RatePath` | Rate endpoint path — public, no DB write, no key | `/api/v1/shipping/rates` |
+| `Glp:ShipPath` | Ship endpoint path (writes `tbl_consignee`) | `/api/v1/shipments` |
+| `Glp:ApiKey` | `X-API-Key` for the **Ship** endpoint only (Rate is public). **Secret** — set via `Glp__ApiKey` env var on the server, never commit a real value. | _(empty)_ |
 | `Legacy:BaseUrl` | Base URL of the **relocated** legacy `Routing.svc` origin for pass-through ops | `http://localhost:9090` |
 
 `Legacy:BaseUrl` must **not** resolve back to the adapter's own host, or pass-through traffic loops.
@@ -113,52 +114,55 @@ Override per environment without editing source, e.g.:
 
 ```bash
 export Glp__BaseUrl="http://glp.internal:8080"
-export Glp__RatePath="/v1/rate"
-export Glp__ShipPath="/v1/ship"
+export Glp__ApiKey="…"   # Ship endpoint only; secret, set on the server
 export Legacy__BaseUrl="http://pds-origin.internal"
 ```
 
 ---
 
-## ⚠️ The two unconfirmed mappings (STUB — do not invent)
+## ⚠️ Mapping status: inbound CONFIRMED, outbound still a stub
 
-Two things depend on data we have not yet captured from Summit (every sample request/response was
-empty). Each lives behind **one obvious seam** with a `TODO(confirm)` marker and a sensible default.
-**Do not** scatter guessed field names through the logic — change only these two files when a real
-capture arrives.
+1. **Inbound — the `<rData>` structure** → `SummitAdapter/Soap/InboundFieldMap.cs`
+   **CONFIRMED** by a real captured Summit request (2026-07-12, now `fixtures/rate-request.xml`,
+   WSKEY redacted). The real shape is **nested**, PascalCase, in the PDSRouting datacontract
+   namespace: header fields under `rData`, package fields under
+   `RatePackageRequests > RatePackageRequest`, line items under `RatePackageDetailRequests`.
+   The parser requires **exactly one** package per request — GLP rates one package per call, and
+   rating only the first of several would return a wrong (too-low) price, so multi-package requests
+   get a Client Fault.
 
-1. **Inbound — child element names inside `<rData>`**
-   → `SummitAdapter/Soap/InboundFieldMap.cs`
-   Default: the camelCase JSON DTO field names (section 6), looked up namespace-agnostically.
-
-2. **Outbound — element names inside `<…Result>`**
-   → `SummitAdapter/Soap/OutboundFieldMap.cs`
-   Default: PascalCase tags matching the landed-cost fields (section 6).
-
-When you capture one real request + response from Summit: update those two files and replace the
-`fixtures/*.xml` placeholders. Nothing else should need to change.
+2. **Outbound — element names inside `<…Result>`** → `SummitAdapter/Soap/OutboundFieldMap.cs`
+   **Still unconfirmed** (`TODO(confirm)`) — no real response has been captured. Default: PascalCase
+   tags matching the landed-cost fields. Do not invent names; update only that file when a response
+   capture (or the WSDL) arrives.
 
 ---
 
 ## Data contracts (section 6)
 
-**Inbound DTO → GLP (JSON, camelCase).** The adapter forwards values; GLP does authoritative
-validation. The adapter only validates enough to fail fast with a clean Fault on malformed input.
+**SOAP in → GLP JSON.** GLP's `POST /api/v1/shipping/rates` accepts **exactly nine** camelCase
+fields and rejects unknown ones (`@JsonIgnoreProperties(ignoreUnknown = false)`), confirmed against
+`RateRequest.java`. The adapter maps the captured Summit fields onto them and **drops everything
+else** (`WSKEY`, `RequestDateTime`, `SourceOfRequest`, `SubAccountNumber`, `JobNumber`,
+`DestinationPostalCode`, `BoxID`, `Insure`/`InsureAmount`/`InsureCharge`, `FreightCharge`,
+`CurrencyCode`, and the `RatePackageDetailRequest` line items) — GLP would reject them. The adapter
+validates only enough to fail fast with a clean Fault; GLP does authoritative validation.
 
-| Field | Type | Constraint |
+| GLP field | From (captured Summit element) | Constraint |
 | --- | --- | --- |
-| `accountNumber` | string | required, max 4 |
-| `destinationCountryCode` | string | required, exactly 2 (ISO) |
-| `weight` | number | required, > 0 |
-| `weightUOM` | string | `Pounds` \| `Kilograms` (default Pounds) |
-| `length`, `width`, `height` | number | required, > 0 |
-| `dimensionUOM` | string | `Inches` \| `Centimeters` (default Inches) |
-| `packageValue` | number | required, > 0 |
+| `accountNumber` | rData `AccountNumber` | required, max 4 |
+| `destinationCountryCode` | rData `DestinationCountryCode` | required, exactly 2 (ISO) |
+| `weight` | package `Weight` | required, > 0 |
+| `weightUOM` | package `WeightUOM` | `Pounds` \| `Kilograms` (default Pounds) |
+| `length`, `width`, `height` | package `Length`/`Width`/`Height` | required, > 0 |
+| `dimensionUOM` | package `DimensionUOM` | `Inches` \| `Centimeters` (default Inches) |
+| `packageValue` | package `PackageValue` | required, > 0 |
 
-**GLP response → SOAP Result.** GLP returns a single object, or an array whose first element is
-used: `FreightCost`, `FuelSurcharge`, `TotalFreightCost`, `DutyValue`, `VatValue`,
-`TotalTaxesDuties`, `TotalCost`, `CurrencyCode`, `BillableWeight`, `BillableWeightUOM`,
+**GLP response → SOAP Result (Rate family only).** For Rate ops, GLP returns a single object, or an
+array whose first element is used: `FreightCost`, `FuelSurcharge`, `TotalFreightCost`, `DutyValue`,
+`VatValue`, `TotalTaxesDuties`, `TotalCost`, `CurrencyCode`, `BillableWeight`, `BillableWeightUOM`,
 `DimensionalWeight`. Each becomes an element inside `<{Operation}Result>` (tag names per mapping #2).
+The **Ship** endpoint does no such mapping — GLP's response is relayed to the caller verbatim.
 
 ---
 
@@ -174,6 +178,8 @@ used: `FreightCost`, `FuelSurcharge`, `TotalFreightCost`, `DutyValue`, `VatValue
 - **Fault builder** — malformed XML in → valid SOAP 1.1 Fault out; a legacy outage → Server Fault.
 - **End-to-end** — in-memory host with GLP and the legacy forwarder mocked: a Rate op translates to
   SOAP out; a Route op is relayed to the legacy service verbatim.
+- **Ship relay** — a ported Ship op returns GLP's response (status, content type, body) verbatim, with
+  the `X-API-Key` attached; a GLP error status is relayed, not turned into a Fault.
 
 Fixtures under `fixtures/` are **placeholders** until real Summit captures replace them.
 
@@ -230,8 +236,9 @@ app pool = SummitAdapter, host name `pds.gdnparcel.com`.
 ### 6. Configuration
 
 Point `Glp:BaseUrl` at the GLP service and `Legacy:BaseUrl` at the **relocated** legacy origin (step
-8), both reachable **from the server** — via `appsettings.Production.json` or the `Glp__BaseUrl` /
-`Legacy__BaseUrl` env vars in `web.config`. Confirm `Legacy:BaseUrl` does **not** resolve back to
+8), both reachable **from the server** — in `appsettings.Production.json`, the single source for
+non-secret production config. The one secret, `Glp:ApiKey`, is supplied via the `Glp__ApiKey` env var
+(commented slot in `web.config`). Confirm `Legacy:BaseUrl` does **not** resolve back to
 `pds.gdnparcel.com`. Ensure `ASPNETCORE_ENVIRONMENT=Production` (already set in the checked-in
 `web.config`). From the server, confirm outbound reachability to **both** GLP and the legacy origin
 (firewall).

@@ -13,8 +13,9 @@ public static class HandlerHarness
 {
     public sealed record Result(int StatusCode, string? ContentType, string Body);
 
-    public static SoapHandler Build(IGlpClient glp, ILegacyForwarder? legacy = null) => new(
-        new OperationRegistry(),
+    public static SoapHandler Build(
+        IGlpClient glp, ILegacyForwarder? legacy = null, OperationRegistry? registry = null) => new(
+        registry ?? new OperationRegistry(),
         new SoapRequestParser(),
         new SoapResponseBuilder(),
         new SoapFaultBuilder(),
@@ -23,9 +24,10 @@ public static class HandlerHarness
         NullLogger<SoapHandler>.Instance);
 
     public static async Task<Result> InvokeAsync(
-        IGlpClient glp, string body, string? soapAction, ILegacyForwarder? legacy = null)
+        IGlpClient glp, string body, string? soapAction,
+        ILegacyForwarder? legacy = null, OperationRegistry? registry = null)
     {
-        var handler = Build(glp, legacy);
+        var handler = Build(glp, legacy, registry);
 
         var context = new DefaultHttpContext();
         context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));

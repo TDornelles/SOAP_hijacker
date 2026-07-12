@@ -9,13 +9,11 @@ namespace SummitAdapter.Dispatch;
 /// <param name="Name">Operation name (the SOAPAction segment / body element local name).</param>
 /// <param name="Routing">Pass-through to legacy, or translate to GLP.</param>
 /// <param name="GlpEndpoint">Which GLP endpoint a translated operation forwards to;
-///   <c>null</c> for pass-through operations (irrelevant until ported).</param>
-/// <param name="WritesDb">True when the ported operation causes a write (Route/Ship); false for
-///   read-only Rate. Meaningful only for <see cref="OperationRouting.Translate"/>.</param>
+///   <c>null</c> for pass-through operations (irrelevant until ported). The endpoint also carries
+///   the write semantics: Ship creates the delivery (GLP writes the DB), Rate is read-only.</param>
 /// <param name="ResponseNamespace">XML namespace for the response operation/Result elements.</param>
 public sealed record OperationDescriptor(
     string Name,
     OperationRouting Routing,
     GlpEndpoint? GlpEndpoint,
-    bool WritesDb,
     string ResponseNamespace);

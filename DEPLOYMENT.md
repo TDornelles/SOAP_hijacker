@@ -48,8 +48,13 @@ troubleshooting are in [`README.md`](./README.md#iis-deployment-section-10).
       (import to `LocalMachine\My`; enable SNI if needed).
 
 ## 6. Configuration
-- [ ] Set `Glp:BaseUrl` to the GLP service reachable **from the server** — via
-      `appsettings.Production.json` or the `Glp__BaseUrl` env var in `web.config`.
+- [ ] Set `Glp:BaseUrl` to the GLP service reachable **from the server**, in
+      `appsettings.Production.json` (the single source for non-secret config).
+- [ ] Set `Glp:ApiKey` to the GLP **Ship** endpoint key (`X-API-Key`). This is a **secret** — supply
+      it on the server via the `Glp__ApiKey` env var (commented slot in `web.config`); do **not**
+      commit a real key. The **Rate** endpoint (`/api/v1/shipping/rates`) is public and needs no key;
+      the key is sent only on Ship (`/api/v1/shipments`). Until Ship is ported it is unused, but Ship
+      calls **fail fast** with a clear error if it is missing.
 - [ ] Set `Legacy:BaseUrl` to the **relocated** legacy `Routing.svc` origin (see step 8), via
       `appsettings.Production.json` or the `Legacy__BaseUrl` env var. Confirm it does **not** resolve
       back to `pds.gdnparcel.com` (would loop pass-through traffic).
@@ -87,4 +92,4 @@ rerouting the whole site.
       origin's response verbatim.
 - [ ] **Porting more ops later is a code change, not a routing change.** To bring a new package
       insertion live, flip its line in `OperationRegistry` from `PassThrough` to
-      `Translate(…, GlpEndpoint.Ship, writesDb: true)`, publish, and redeploy — routing stays put.
+      `Translate(…, GlpEndpoint.Ship)`, publish, and redeploy — routing stays put.

@@ -8,9 +8,11 @@ namespace SummitAdapter.Endpoints;
 
 /// <summary>
 /// The single <c>.svc</c> request handler — the request lifecycle from section 5. It is a selective
-/// hijacker: for operations that have been ported it translates (read raw XML, parse rData, forward
-/// to GLP, build the SOAP response); for every other operation it forwards the request unchanged to
-/// the legacy service and relays the response verbatim. Every error path returns a SOAP 1.1 Fault
+/// hijacker: for ported operations it parses <c>rData</c> and forwards to GLP; for every other
+/// operation it forwards the request unchanged to the legacy service and relays the response verbatim.
+/// Ported responses are handled per endpoint: the Rate family is translated into a typed SOAP
+/// envelope, while the Ship endpoint relays GLP's response verbatim (status, content type, body) —
+/// its shape is GLP's to define. Error paths (parse errors, GLP unreachable) return a SOAP 1.1 Fault
 /// with text/xml, never a bare HTTP page.
 /// </summary>
 public sealed class SoapHandler
@@ -87,24 +89,34 @@ public sealed class SoapHandler
             return;
         }
 
-        // 5/6. Forward to GLP (rate vs ship per the registry); non-success → Server Fault.
-        LandedCostResult result;
+        // 5/6/7. Forward to GLP. The Rate family returns landed-cost figures that we translate into a
+        //        typed SOAP envelope. The Ship endpoint creates the delivery and its response shape is
+        //        GLP's to define, so we relay GLP's response verbatim (status, content type, body) —
+        //        exactly what GLP returned. A transport failure (GLP unreachable) is a Server Fault
+        //        either way; for Ship, a GLP error *status* is relayed as-is, not turned into a Fault.
         try
         {
-            result = await _glp.SendAsync(descriptor.GlpEndpoint!.Value, request, cancellationToken);
+            if (descriptor.GlpEndpoint == GlpEndpoint.Ship)
+            {
+                var raw = await _glp.SendRawAsync(GlpEndpoint.Ship, request, cancellationToken);
+                context.Response.StatusCode = raw.StatusCode;
+                context.Response.ContentType = raw.ContentType;
+                await context.Response.WriteAsync(raw.Body, Encoding.UTF8, cancellationToken);
+                return;
+            }
+
+            var result = await _glp.SendAsync(descriptor.GlpEndpoint!.Value, request, cancellationToken);
+            var xml = _responseBuilder.Build(descriptor, result);
+            await WriteSoapAsync(context, StatusCodes.Status200OK, xml);
         }
         catch (GlpException ex)
         {
             _logger.LogError(ex,
                 "GLP call for {Operation} failed. Status={Status} Body={Body}",
                 operationName, ex.StatusCode, ex.ResponseBody);
-            await WriteFaultAsync(context, SoapFaultCode.Server, "Downstream rating service error.");
+            await WriteFaultAsync(context, SoapFaultCode.Server, "Downstream service error.");
             return;
         }
-
-        // 7. Build the SOAP success envelope and return it.
-        var xml = _responseBuilder.Build(descriptor, result);
-        await WriteSoapAsync(context, StatusCodes.Status200OK, xml);
     }
 
     /// <summary>

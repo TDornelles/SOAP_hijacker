@@ -27,11 +27,22 @@ public sealed class FakeGlpClient : IGlpClient
 
     public GlpEndpoint? LastEndpoint => Calls.Count > 0 ? Calls[^1].Endpoint : null;
 
+    /// <summary>Canned raw response returned by <see cref="SendRawAsync"/> (the Ship path).</summary>
+    public GlpRawResponse RawResponse { get; set; } =
+        new(201, "application/json", """{"shipmentId":"SHP-1"}""");
+
     public Task<LandedCostResult> SendAsync(
         GlpEndpoint endpoint, PackageRequest request, CancellationToken cancellationToken)
     {
         Calls.Add((endpoint, request));
         return Task.FromResult(_responder(endpoint, request));
+    }
+
+    public Task<GlpRawResponse> SendRawAsync(
+        GlpEndpoint endpoint, PackageRequest request, CancellationToken cancellationToken)
+    {
+        Calls.Add((endpoint, request));
+        return Task.FromResult(RawResponse);
     }
 
     public static LandedCostResult Default() => new()

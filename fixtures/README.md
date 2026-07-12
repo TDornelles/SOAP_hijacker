@@ -1,22 +1,24 @@
-# Fixtures — PLACEHOLDERS
+# Fixtures
 
-These XML files are **placeholders**, not real Summit captures. They exist so the tests can run
-end-to-end without Summit and without a live GLP.
+**`rate-request.xml` is a REAL Summit capture** (transcribed 2026-07-12 from screenshots in
+`GDN_dump/summit_requests`; the live WSKEY replaced with a dummy GUID). It is the ground truth for
+inbound mapping #1: rData is nested — header fields, then
+`RatePackageRequests > RatePackageRequest`, with `RatePackageDetailRequests` line items inside.
+`SoapRequestParser` parses this exact shape; the parser tests assert against this file.
 
-Two things in them are **unconfirmed** and will change once we capture one real request/response
-from Summit (see spec section 4):
+The other XML files are **placeholders**:
 
-1. The child element names inside `<rData>` (currently the camelCase DTO field names).
-   Source of truth: `SummitAdapter/Soap/InboundFieldMap.cs` — `TODO(confirm)`.
-2. The element names inside `<…Result>` (currently PascalCase landed-cost field names).
-   Source of truth: `SummitAdapter/Soap/OutboundFieldMap.cs` — `TODO(confirm)`.
+- `route-request.xml` — no real Route capture yet. Mirrors the confirmed nested rData style, but the
+  Route-specific fields (consignee address etc.) are unknown until captured. Only used for
+  pass-through tests today (pass-through never parses the body).
+- `rate-response.xml` / `route-response.xml` — **the response side has never been captured.**
+  Outbound mapping #2 (`<…Result>` element names) is still the stubbed guess in
+  `SummitAdapter/Soap/OutboundFieldMap.cs` — `TODO(confirm)` stands until a real response capture
+  (or WSDL) arrives.
 
-When a real capture arrives: update those two map files and replace these fixtures with the
-captured XML. Nothing else should need to change.
-
-| File | Operation | SOAPAction |
-| --- | --- | --- |
-| `rate-request.xml` | `RateLandedCost` | `http://tempuri.org/IRouting/RateLandedCost` |
-| `rate-response.xml` | `RateLandedCost` | — |
-| `route-request.xml` | `RouteDeliveryRateLandedCost` | `http://tempuri.org/IRouting/RouteDeliveryRateLandedCost` |
-| `route-response.xml` | `RouteDeliveryRateLandedCost` | — |
+| File | Operation | SOAPAction | Real? |
+| --- | --- | --- | --- |
+| `rate-request.xml` | `RateLandedCost` | `http://tempuri.org/IRouting/RateLandedCost` | **YES** (WSKEY redacted) |
+| `rate-response.xml` | `RateLandedCost` | — | placeholder |
+| `route-request.xml` | `RouteDeliveryRateLandedCost` | `http://tempuri.org/IRouting/RouteDeliveryRateLandedCost` | placeholder (real nested style) |
+| `route-response.xml` | `RouteDeliveryRateLandedCost` | — | placeholder |

@@ -11,8 +11,7 @@ public class SoapResponseBuilderTests
     private readonly SoapResponseBuilder _builder = new();
 
     private static OperationDescriptor Descriptor(string name) =>
-        new(name, OperationRouting.Translate, GlpEndpoint.Rate, WritesDb: false,
-            SoapConstants.TempuriNamespace);
+        new(name, OperationRouting.Translate, GlpEndpoint.Rate, SoapConstants.TempuriNamespace);
 
     [Fact]
     public void Builds_well_formed_envelope_with_expected_result_elements()

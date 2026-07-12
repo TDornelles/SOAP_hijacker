@@ -1,24 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- PLACEHOLDER. SOAPAction: http://tempuri.org/IRouting/RouteDeliveryRateLandedCost
-     rData element names are the unconfirmed stubbed mapping #1 (InboundFieldMap.cs). -->
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Header>
-    <wsse:Security soap:mustUnderstand="1"
-                   xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" />
-  </soap:Header>
-  <soap:Body>
+     No real Route request has been captured yet. The rData structure below mirrors the CONFIRMED
+     nested shape of the captured Rate request (see rate-request.xml) — same PDSRouting datacontract
+     style — but the Route-specific fields (consignee address etc.) are unknown until captured. -->
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Header>
+    <Action s:mustUnderstand="1"
+            xmlns="http://schemas.microsoft.com/ws/2005/05/addressing/none">http://tempuri.org/IRouting/RouteDeliveryRateLandedCost</Action>
+  </s:Header>
+  <s:Body>
     <RouteDeliveryRateLandedCost xmlns="http://tempuri.org/">
-      <rData>
-        <accountNumber>ACME</accountNumber>
-        <destinationCountryCode>GB</destinationCountryCode>
-        <weight>3.2</weight>
-        <weightUOM>Kilograms</weightUOM>
-        <length>20</length>
-        <width>15</width>
-        <height>10</height>
-        <dimensionUOM>Centimeters</dimensionUOM>
-        <packageValue>500.00</packageValue>
+      <rData xmlns:d4p1="http://schemas.datacontract.org/2004/07/PDSRouting">
+        <d4p1:WSKEY>00000000-0000-0000-0000-000000000000</d4p1:WSKEY>
+        <d4p1:AccountNumber>ACME</d4p1:AccountNumber>
+        <d4p1:DestinationCountryCode>GB</d4p1:DestinationCountryCode>
+        <d4p1:RatePackageRequests>
+          <d4p1:RatePackageRequest>
+            <d4p1:Weight>3.2</d4p1:Weight>
+            <d4p1:WeightUOM>Kilograms</d4p1:WeightUOM>
+            <d4p1:Length>20</d4p1:Length>
+            <d4p1:Width>15</d4p1:Width>
+            <d4p1:Height>10</d4p1:Height>
+            <d4p1:DimensionUOM>Centimeters</d4p1:DimensionUOM>
+            <d4p1:PackageValue>500.00</d4p1:PackageValue>
+          </d4p1:RatePackageRequest>
+        </d4p1:RatePackageRequests>
       </rData>
     </RouteDeliveryRateLandedCost>
-  </soap:Body>
-</soap:Envelope>
+  </s:Body>
+</s:Envelope>

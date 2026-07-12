@@ -1,4 +1,6 @@
 using SummitAdapter.Dispatch;
+using SummitAdapter.Services;
+using SummitAdapter.Soap;
 using SummitAdapter.Tests.TestSupport;
 using Xunit;
 
@@ -95,5 +97,30 @@ public class DispatchRoutingTests
 
         Assert.Contains("soap:Client", result.Body);
         Assert.Contains("text/xml", result.ContentType);
+    }
+
+    [Fact]
+    public async Task Ported_ship_op_relays_glp_response_verbatim()
+    {
+        // Simulate the ported state: RouteDelivery translated to the Ship endpoint. The Ship path
+        // returns whatever GLP returned (status, content type, body) — no SOAP envelope, no mapping.
+        var registry = new OperationRegistry(new[]
+        {
+            new OperationDescriptor("RouteDelivery", OperationRouting.Translate,
+                GlpEndpoint.Ship, SoapConstants.TempuriNamespace),
+        });
+        var glp = new FakeGlpClient
+        {
+            RawResponse = new GlpRawResponse(201, "application/json", """{"shipmentId":"SHP-42"}""")
+        };
+
+        var result = await HandlerHarness.InvokeAsync(
+            glp, Fixtures.Load(Fixtures.RouteRequest),
+            "http://tempuri.org/IRouting/RouteDelivery", registry: registry);
+
+        Assert.Equal(GlpEndpoint.Ship, glp.LastEndpoint);
+        Assert.Equal(201, result.StatusCode);
+        Assert.Equal("application/json", result.ContentType);
+        Assert.Equal("""{"shipmentId":"SHP-42"}""", result.Body);
     }
 }

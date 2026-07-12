@@ -5,10 +5,14 @@ using SummitAdapter.Models;
 namespace SummitAdapter.Soap;
 
 /// <summary>
-/// Parses <c>&lt;rData&gt;</c> into a <see cref="PackageRequest"/> (section 5, step 4). Element
-/// names come from the stubbed <see cref="InboundFieldMap"/>; lookups are namespace-agnostic and
-/// case-insensitive. Only enough validation is performed to fail fast with a clean Fault on
-/// obviously malformed input — GLP does authoritative validation.
+/// Parses <c>&lt;rData&gt;</c> into a <see cref="PackageRequest"/> (section 5, step 4). The real
+/// Summit shape (confirmed by capture, see <see cref="InboundFieldMap"/>) is nested: account and
+/// destination sit directly under <c>rData</c>; the dimensions/value sit inside
+/// <c>RatePackageRequests &gt; RatePackageRequest</c>. GLP rates one package per call, so exactly
+/// one package element is required — a multi-package request is rejected with a clean Fault rather
+/// than silently rating only the first box. Captured fields GLP does not accept (WSKEY, dates,
+/// insurance, line items, …) are ignored. Lookups are namespace-agnostic and case-insensitive.
+/// Only enough validation is performed to fail fast — GLP does authoritative validation.
 /// </summary>
 public sealed class SoapRequestParser
 {
@@ -30,9 +34,52 @@ public sealed class SoapRequestParser
         var rData = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "rData")
             ?? throw new SoapParseException("Request is missing the <rData> element.");
 
-        // Index children by local name (namespace-agnostic, case-insensitive). First wins on dupes.
+        var header = IndexChildren(rData);
+
+        // Locate the single package. Zero packages is a malformed request; more than one cannot be
+        // priced by GLP's one-package rate call, and rating only the first would return a wrong
+        // (too-low) price — so both are Client Faults.
+        var packages = rData.Descendants()
+            .Where(e => e.Name.LocalName.Equals(InboundFieldMap.Package, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (packages.Count == 0)
+        {
+            throw new SoapParseException(
+                $"Request contains no <{InboundFieldMap.Package}> element under <rData>.");
+        }
+
+        if (packages.Count > 1)
+        {
+            throw new SoapParseException(
+                $"Request contains {packages.Count} <{InboundFieldMap.Package}> elements; " +
+                "only single-package rate requests are supported.");
+        }
+
+        var package = IndexChildren(packages[0]);
+
+        var request = new PackageRequest
+        {
+            AccountNumber = RequiredString(header, InboundFieldMap.AccountNumber, maxLength: 4),
+            DestinationCountryCode = RequiredString(header, InboundFieldMap.DestinationCountryCode, exactLength: 2),
+            Weight = RequiredPositiveNumber(package, InboundFieldMap.Weight),
+            WeightUOM = OptionalEnum(package, InboundFieldMap.WeightUOM, WeightUoms, "Pounds"),
+            Length = RequiredPositiveNumber(package, InboundFieldMap.Length),
+            Width = RequiredPositiveNumber(package, InboundFieldMap.Width),
+            Height = RequiredPositiveNumber(package, InboundFieldMap.Height),
+            DimensionUOM = OptionalEnum(package, InboundFieldMap.DimensionUOM, DimensionUoms, "Inches"),
+            PackageValue = RequiredPositiveNumber(package, InboundFieldMap.PackageValue),
+        };
+
+        return request;
+    }
+
+    /// <summary>Index an element's children by local name (namespace-agnostic, case-insensitive).
+    /// First wins on duplicates.</summary>
+    private static Dictionary<string, string> IndexChildren(XElement parent)
+    {
         var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var child in rData.Elements())
+        foreach (var child in parent.Elements())
         {
             var key = child.Name.LocalName;
             if (!fields.ContainsKey(key))
@@ -41,20 +88,7 @@ public sealed class SoapRequestParser
             }
         }
 
-        var request = new PackageRequest
-        {
-            AccountNumber = RequiredString(fields, InboundFieldMap.AccountNumber, maxLength: 4),
-            DestinationCountryCode = RequiredString(fields, InboundFieldMap.DestinationCountryCode, exactLength: 2),
-            Weight = RequiredPositiveNumber(fields, InboundFieldMap.Weight),
-            WeightUOM = OptionalEnum(fields, InboundFieldMap.WeightUOM, WeightUoms, "Pounds"),
-            Length = RequiredPositiveNumber(fields, InboundFieldMap.Length),
-            Width = RequiredPositiveNumber(fields, InboundFieldMap.Width),
-            Height = RequiredPositiveNumber(fields, InboundFieldMap.Height),
-            DimensionUOM = OptionalEnum(fields, InboundFieldMap.DimensionUOM, DimensionUoms, "Inches"),
-            PackageValue = RequiredPositiveNumber(fields, InboundFieldMap.PackageValue),
-        };
-
-        return request;
+        return fields;
     }
 
     private static string RequiredString(
