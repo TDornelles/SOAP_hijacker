@@ -17,3 +17,6 @@ publish/
 ## OS
 .DS_Store
 Thumbs.db
+
+## Expanded deploy output on the server (site physical path)
+app/
