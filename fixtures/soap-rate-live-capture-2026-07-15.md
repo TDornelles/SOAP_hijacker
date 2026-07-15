@@ -70,6 +70,27 @@ surcharge and 28.65 total have no direct legacy slot), and duty/tax figures live
 `DutyValue`/`VatValue`. Mapping GLP → legacy Result is therefore a real design decision, not a
 rename.
 
+## Plain `Rate` operation (valid WSKEY, captured 2026-07-15 20:03 UTC)
+
+Same rData, `SOAPAction: "http://tempuri.org/IRouting/Rate"`, request element `<Rate>`:
+`HTTP/1.1 200 OK`, 0.97 s.
+
+```xml
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body><RateResponse xmlns="http://tempuri.org/"><RateResult xmlns:a="http://schemas.datacontract.org/2004/07/PDSRouting" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><a:AccountNumber>3528</a:AccountNumber><a:ResponseDateTime>2026-07-15T20:03:28.2891184+00:00</a:ResponseDateTime><a:RateResponseEntries><a:RateResponseEntry><a:BoxID>0</a:BoxID><a:RateEntity><a:ProcessingCost>10</a:ProcessingCost><a:BillableWeight>1.11</a:BillableWeight><a:BillableWeightUOM>Pounds</a:BillableWeightUOM><a:DimensionFactor>139</a:DimensionFactor><a:FreightCost>22.92</a:FreightCost><a:InsureCost>0.00</a:InsureCost><a:LandedCost>0</a:LandedCost><a:CurrencyCode>USD</a:CurrencyCode></a:RateEntity><a:LandedCostDetailEntities i:nil="true"/><a:MessageEntities><a:MessageEntity><a:Code>00000</a:Code><a:Description>Request Successful</a:Description></a:MessageEntity></a:MessageEntities></a:RateResponseEntry></a:RateResponseEntries></RateResult></RateResponse></s:Body></s:Envelope>
+```
+
+Findings vs the `RateLandedCost` success capture:
+
+- **Structure is identical** — `{Operation}Response > {Operation}Result` (`RateResult` here) with
+  the same nested PDSRouting entries. The adapter's builder convention matches as-is.
+- **⚠️ `ProcessingCost` is `10` on `Rate` but `0` on `RateLandedCost`** for the same package,
+  account, and moment. The adapter currently emits a constant `0`, so hijacked plain-`Rate`
+  responses under-report ProcessingCost by 10 vs legacy. GLP has no ProcessingCost figure to map;
+  if the fee matters, it needs a per-operation constant/config or a GLP-side field. Business call
+  pending.
+- All other figures byte-identical (FreightCost 22.92, BillableWeight 1.11, DimensionFactor 139,
+  InsureCost 0.00, LandedCost 0, USD, message 00000).
+
 ## Structure implications (⚠️ invalidates STUBBED MAPPING #2)
 
 The real `<RateLandedCostResult>` is **nested and namespaced** (`a:` =
