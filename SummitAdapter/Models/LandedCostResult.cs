@@ -11,7 +11,10 @@ public sealed class LandedCostResult
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        // GLP serializes money figures as JSON strings ("FreightCost":"22.92") while the weights
+        // are numbers — confirmed by live capture (fixtures/glp-rate-live-capture-2026-07-15.md).
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
     };
 
     public decimal? FreightCost { get; set; }
