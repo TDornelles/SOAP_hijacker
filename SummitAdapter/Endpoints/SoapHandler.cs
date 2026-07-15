@@ -106,7 +106,7 @@ public sealed class SoapHandler
             }
 
             var result = await _glp.SendAsync(descriptor.GlpEndpoint!.Value, request, cancellationToken);
-            var xml = _responseBuilder.Build(descriptor, result);
+            var xml = _responseBuilder.Build(descriptor, request, result);
             await WriteSoapAsync(context, StatusCodes.Status200OK, xml);
         }
         catch (GlpException ex)

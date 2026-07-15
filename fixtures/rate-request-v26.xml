@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- fixtures/rate-request.xml with the <s:Header> block removed: the live V2.6 endpoint returns
+     an empty 400 on the dev-capture's WS-Addressing <Action mustUnderstand="1"> header (see
+     fixtures/soap-rate-live-capture-2026-07-15.md). Use THIS body when POSTing to the real
+     legacy endpoint; the SOAPAction HTTP header alone selects the operation.
+     WSKEY is a dummy - the legacy service answers 200 with business error "10001 Invalid Account
+     Details" for it; substitute a valid key to get a rated (success) response. -->
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Body>
+    <RateLandedCost xmlns="http://tempuri.org/">
+      <rData xmlns:d4p1="http://schemas.datacontract.org/2004/07/PDSRouting" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+        <d4p1:WSKEY>00000000-0000-0000-0000-000000000000</d4p1:WSKEY>
+        <d4p1:AccountNumber>3528</d4p1:AccountNumber>
+        <d4p1:RequestDateTime>2025-05-19T10:38:22.2200907-04:00</d4p1:RequestDateTime>
+        <d4p1:SourceOfRequest>WEBSERVICE</d4p1:SourceOfRequest>
+        <d4p1:SubAccountNumber i:nil="true" />
+        <d4p1:JobNumber i:nil="true" />
+        <d4p1:DestinationCountryCode>NZ</d4p1:DestinationCountryCode>
+        <d4p1:DestinationPostalCode>4122</d4p1:DestinationPostalCode>
+        <d4p1:RatePackageRequests>
+          <d4p1:RatePackageRequest>
+            <d4p1:BoxID>0</d4p1:BoxID>
+            <d4p1:Weight>0.45</d4p1:Weight>
+            <d4p1:WeightUOM>Pounds</d4p1:WeightUOM>
+            <d4p1:Length>11</d4p1:Length>
+            <d4p1:Width>7</d4p1:Width>
+            <d4p1:Height>2</d4p1:Height>
+            <d4p1:DimensionUOM>Inches</d4p1:DimensionUOM>
+            <d4p1:Insure>false</d4p1:Insure>
+            <d4p1:InsureAmount>0</d4p1:InsureAmount>
+            <d4p1:InsureCharge>0</d4p1:InsureCharge>
+            <d4p1:FreightCharge>0</d4p1:FreightCharge>
+            <d4p1:PackageValue>12.99</d4p1:PackageValue>
+            <d4p1:CurrencyCode>USD</d4p1:CurrencyCode>
+            <d4p1:RatePackageDetailRequests>
+              <d4p1:RatePackageDetailRequest>
+                <d4p1:CurrencyCode i:nil="true" />
+                <d4p1:HarmonizedCode>8205513060</d4p1:HarmonizedCode>
+                <d4p1:OriginCountryCode>US</d4p1:OriginCountryCode>
+                <d4p1:ProductCode>SUM-900200</d4p1:ProductCode>
+                <d4p1:ProductDescription>THREAD CHASING TAP SET</d4p1:ProductDescription>
+                <d4p1:Quantity>1</d4p1:Quantity>
+                <d4p1:UnitValue>12.99</d4p1:UnitValue>
+              </d4p1:RatePackageDetailRequest>
+            </d4p1:RatePackageDetailRequests>
+          </d4p1:RatePackageRequest>
+        </d4p1:RatePackageRequests>
+      </rData>
+    </RateLandedCost>
+  </s:Body>
+</s:Envelope>

@@ -1,0 +1,18 @@
+# Adapter liveness check
+#
+# Run on the Windows server. All commands work in PowerShell (curl.exe ships with
+# Windows Server 2019+) and in bash.
+#
+# The adapter listens on its own local port (127.0.0.1:8081). Do NOT use plain
+# http://localhost/health - port 80 is the PDS-DEV site, not the adapter.
+
+curl.exe -s http://localhost:8081/health
+
+# Expected: OK            (HTTP 200, text/plain)
+#
+# Failure modes:
+#   connection refused              -> site stopped, or wrong port/binding
+#   HTTP 500.30 / 500.31 / 502.5    -> ANCM startup failure: check the app pool is
+#                                      "No Managed Code" 64-bit, the .NET 8 Hosting Bundle
+#                                      is installed, and flip stdoutLogEnabled="true" in
+#                                      web.config to read .\logs\stdout_*.log

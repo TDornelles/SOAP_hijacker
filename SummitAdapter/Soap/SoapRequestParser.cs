@@ -69,6 +69,9 @@ public sealed class SoapRequestParser
             Height = RequiredPositiveNumber(package, InboundFieldMap.Height),
             DimensionUOM = OptionalEnum(package, InboundFieldMap.DimensionUOM, DimensionUoms, "Inches"),
             PackageValue = RequiredPositiveNumber(package, InboundFieldMap.PackageValue),
+            // Echo-only (never forwarded to GLP): the response repeats the request's BoxID.
+            BoxId = package.TryGetValue(InboundFieldMap.BoxId, out var boxId)
+                    && !string.IsNullOrEmpty(boxId) ? boxId : "0",
         };
 
         return request;

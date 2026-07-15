@@ -68,9 +68,24 @@ public class EndToEndTests : IClassFixture<EndToEndTests.AdapterFactory>
         var body = await response.Content.ReadAsStringAsync();
         var doc = XDocument.Parse(body);
         XNamespace tempuri = SoapConstants.TempuriNamespace;
+        XNamespace pds = SoapConstants.PdsRoutingNamespace;
 
+        // The Result reproduces the captured legacy shape: account + BoxID echoed from the
+        // fixture request, figures from the (fake) GLP result nested under RateEntity, and the
+        // fuel-inclusive TotalFreightCost in the FreightCost slot.
         var result = doc.Descendants(tempuri + "RateLandedCostResult").Single();
-        Assert.Equal("USD", result.Element(tempuri + "CurrencyCode")!.Value);
+        Assert.Equal("3528", result.Element(pds + "AccountNumber")!.Value);
+
+        var entry = result.Element(pds + "RateResponseEntries")!.Element(pds + "RateResponseEntry")!;
+        Assert.Equal("0", entry.Element(pds + "BoxID")!.Value);
+
+        var rate = entry.Element(pds + "RateEntity")!;
+        Assert.Equal("USD", rate.Element(pds + "CurrencyCode")!.Value);
+        Assert.Equal("47.60", rate.Element(pds + "FreightCost")!.Value);
+        Assert.Equal("21.40", rate.Element(pds + "LandedCost")!.Value);
+
+        var message = entry.Element(pds + "MessageEntities")!.Element(pds + "MessageEntity")!;
+        Assert.Equal("00000", message.Element(pds + "Code")!.Value);
     }
 
     [Fact]

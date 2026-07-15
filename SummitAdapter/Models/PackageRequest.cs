@@ -33,4 +33,12 @@ public sealed class PackageRequest
 
     /// <summary>Required, &gt; 0.</summary>
     public decimal PackageValue { get; set; }
+
+    /// <summary>
+    /// Echo-only: the request's BoxID, repeated back as <c>RateResponseEntry &gt; BoxID</c> in the
+    /// SOAP response (legacy echoes it; captured 2026-07-15). Never serialized to GLP — GLP's
+    /// RateRequest rejects unknown fields.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string BoxId { get; set; } = "0";
 }

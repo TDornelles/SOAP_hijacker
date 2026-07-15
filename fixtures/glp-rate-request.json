@@ -1,0 +1,11 @@
+{
+  "accountNumber": "3528",
+  "destinationCountryCode": "NZ",
+  "weight": 0.45,
+  "weightUOM": "Pounds",
+  "length": 11,
+  "width": 7,
+  "height": 2,
+  "dimensionUOM": "Inches",
+  "packageValue": 12.99
+}

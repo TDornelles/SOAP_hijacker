@@ -48,6 +48,7 @@ public class SoapRequestParserTests
         Assert.Equal(2m, request.Height);
         Assert.Equal("Inches", request.DimensionUOM);
         Assert.Equal(12.99m, request.PackageValue);
+        Assert.Equal("0", request.BoxId); // echo-only, from the capture's <BoxID>0</BoxID>
     }
 
     [Fact]
@@ -57,6 +58,21 @@ public class SoapRequestParserTests
 
         Assert.Equal("Pounds", request.WeightUOM);
         Assert.Equal("Inches", request.DimensionUOM);
+    }
+
+    [Fact]
+    public void BoxId_is_captured_for_echo_and_defaults_to_zero()
+    {
+        var withBox = _parser.Parse(Body(packageFields: """
+            <BoxID>7</BoxID>
+            <Weight>1</Weight>
+            <Length>1</Length><Width>1</Width><Height>1</Height>
+            <PackageValue>1</PackageValue>
+            """));
+        Assert.Equal("7", withBox.BoxId);
+
+        var withoutBox = _parser.Parse(Body());
+        Assert.Equal("0", withoutBox.BoxId);
     }
 
     [Fact]

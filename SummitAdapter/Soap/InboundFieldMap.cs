@@ -19,9 +19,11 @@ namespace SummitAdapter.Soap;
 /// </code>
 ///
 /// Captured fields NOT listed here (WSKEY, RequestDateTime, SourceOfRequest, SubAccountNumber,
-/// JobNumber, DestinationPostalCode, BoxID, Insure/InsureAmount/InsureCharge, FreightCharge,
+/// JobNumber, DestinationPostalCode, Insure/InsureAmount/InsureCharge, FreightCharge,
 /// CurrencyCode, and the RatePackageDetailRequest line items) are deliberately dropped: GLP's
 /// RateRequest accepts exactly nine fields and rejects unknown ones (ignoreUnknown = false).
+/// BoxID is the one exception — it is parsed but never forwarded: legacy echoes it back in
+/// <c>RateResponseEntry &gt; BoxID</c> (captured 2026-07-15), so the adapter must echo it too.
 /// This is still the ONLY place for inbound element names — do not scatter them through logic.
 /// </summary>
 public static class InboundFieldMap
@@ -38,6 +40,9 @@ public static class InboundFieldMap
     public const string Package = "RatePackageRequest";
 
     // ── package fields (direct children of the package element) ─────────────────
+    /// <summary>Echo-only: never sent to GLP, only repeated back in the response.</summary>
+    public const string BoxId = "BoxID";
+
     public const string Weight = "Weight";
     public const string WeightUOM = "WeightUOM";
     public const string Length = "Length";

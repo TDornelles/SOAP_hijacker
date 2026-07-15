@@ -132,6 +132,9 @@ public class GlpClientTests
 
         Assert.Contains("\"accountNumber\":\"AB\"", handler.LastRequestBody);
         Assert.Contains("\"packageValue\":1", handler.LastRequestBody);
+        // BoxId is echo-only SOAP state — GLP's RateRequest rejects unknown fields, so it must
+        // never appear on the wire.
+        Assert.DoesNotContain("boxId", handler.LastRequestBody, System.StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
