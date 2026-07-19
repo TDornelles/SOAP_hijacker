@@ -1,18 +1,19 @@
 # Adapter liveness check
 #
-# Run on the Windows server. All commands work in PowerShell (curl.exe ships with
-# Windows Server 2019+) and in bash.
+# Run on the Windows server. The adapter listens on its own local port (127.0.0.1:8082).
+# Do NOT use plain http://localhost/health - port 80 is the PDS-DEV site, not the adapter.
 #
-# The adapter listens on its own local port (127.0.0.1:8081). Do NOT use plain
-# http://localhost/health - port 80 is the PDS-DEV site, not the adapter.
+# NOTE (2026-07-19): on this box, curl.exe POSTs with --data-binary @file fail with HTTP 411
+# (no Content-Length), so the POST samples below use Invoke-WebRequest, which is reliable on
+# Windows. GET has no body, so curl is fine here.
 
-curl.exe -s http://localhost:8081/health
+curl.exe -s http://localhost:8082/health
 
-# Expected: OK            (HTTP 200, text/plain)
+# PowerShell-native equivalent:
+#   Invoke-RestMethod http://localhost:8082/health
+
+# Expected: OK   (HTTP 200)
 #
-# Failure modes:
-#   connection refused              -> site stopped, or wrong port/binding
-#   HTTP 500.30 / 500.31 / 502.5    -> ANCM startup failure: check the app pool is
-#                                      "No Managed Code" 64-bit, the .NET 8 Hosting Bundle
-#                                      is installed, and flip stdoutLogEnabled="true" in
-#                                      web.config to read .\logs\stdout_*.log
+# 503 Service Unavailable -> app pool stopped or site points at the wrong pool.
+# 500 (empty body)        -> ANCM/web.config problem; check
+#                            Get-WebConfiguration -pspath 'IIS:\Sites\SOAP_hijacker' -filter 'system.webServer/aspNetCore'

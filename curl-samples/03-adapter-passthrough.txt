@@ -2,23 +2,22 @@
 #
 # RouteDeliveryRateLandedCost is still PassThrough in OperationRegistry, so the adapter must
 # relay it to the legacy origin (Legacy:BaseUrl = http://localhost:8090) untouched and return
-# the legacy response verbatim. Run from the repo root.
+# the legacy response verbatim. Run from the repo root (C:\inetpub\SOAP_hijacker).
 #
 # PREREQUISITE: the PDS site needs its extra local binding on port 8090
-# (IIS > PDS site > Bindings > Add > http, IP 127.0.0.1, port 8090, no host name).
+# (IIS > PDS site > Bindings > Add > http, IP 127.0.0.1, port 8090, host name blank).
 # Without it this returns a soap:Server "Downstream service unavailable" Fault.
 
-curl.exe -s -X POST http://localhost:8081/Routing/Service/Soap/V2.6/Routing.svc -H "Content-Type: text/xml; charset=utf-8" -H "SOAPAction: \"http://tempuri.org/IRouting/RouteDeliveryRateLandedCost\"" --data-binary "@fixtures/route-request.xml"
+$r = Invoke-WebRequest -Uri http://localhost:8082/Routing/Service/Soap/V2.6/Routing.svc `
+  -Method Post -ContentType "text/xml; charset=utf-8" `
+  -Headers @{ SOAPAction = "http://tempuri.org/IRouting/RouteDeliveryRateLandedCost" } `
+  -InFile .\fixtures\route-request.xml
+$r.Content
 
-# bash equivalent:
-#   curl -s -X POST 'http://localhost:8081/Routing/Service/Soap/V2.6/Routing.svc' \
-#     -H 'Content-Type: text/xml; charset=utf-8' \
-#     -H 'SOAPAction: "http://tempuri.org/IRouting/RouteDeliveryRateLandedCost"' \
-#     --data-binary @fixtures/route-request.xml
+# Expected: whatever the LEGACY service answers (compare with 04-legacy-direct sent straight to
+# legacy - the two responses should match). If you get a soap:Fault instead, the adapter could
+# not reach the legacy origin; check the 8090 binding and Legacy:BaseUrl.
+# Invoke-WebRequest throws on the 500 Fault - catch it and read $_.Exception.Response.
 #
-# Expected: whatever the LEGACY service answers (compare with 04 sent straight to legacy -
-# the two responses should match). If you get a soap:Fault instead, the adapter failed to
-# reach the legacy origin; check the 8090 binding and Legacy:BaseUrl.
-#
-# This check matters because it proves the adapter is a *selective* hijacker: only the two
-# Rate ops are translated; everything else must reach legacy unchanged.
+# This proves the adapter is a *selective* hijacker: only the two Rate ops are translated;
+# everything else reaches legacy unchanged.

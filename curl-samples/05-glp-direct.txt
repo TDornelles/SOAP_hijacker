@@ -1,20 +1,25 @@
 # GLP rates endpoint directly (the adapter's downstream)
 #
 # Calls GLP the same way the adapter does: camelCase 9-field JSON, no auth (Rate is public;
-# only Ship needs X-API-Key). Run from the repo root. Useful to isolate faults: if this
-# works but 02 faults, the problem is in the adapter; if this fails, it's GLP/connectivity.
-
-curl.exe -s -X POST https://glp.gdnparcel.com/api/v1/shipping/rates -H "Content-Type: application/json" --data "@fixtures/glp-rate-request.json"
-
-# From the server you can also skip the public-hostname hairpin and hit GLP's local port
-# (GLP runs on the same box under C:\SpringApps\pdsv2 - adjust the port if GLP uses
-# a different one):
-#   curl.exe -s -X POST http://localhost:8080/api/v1/shipping/rates -H "Content-Type: application/json" --data "@fixtures/glp-rate-request.json"
+# only Ship needs X-API-Key). Run from the repo root. Useful to isolate faults: if this works
+# but 02 faults, the problem is in the adapter; if this fails, it's GLP/connectivity.
 #
-# Expected: HTTP 200 with a single-element JSON array; captured live 2026-07-15:
+# Confirmed reachable from the server 2026-07-19 (the hairpin through the public hostname works).
+
+$r = Invoke-RestMethod -Uri https://glp.gdnparcel.com/api/v1/shipping/rates `
+  -Method Post -ContentType "application/json" -InFile .\fixtures\glp-rate-request.json
+$r | ConvertTo-Json
+
+# curl.exe also works here (JSON body from --data reads fine, unlike the SOAP --data-binary case):
+#   curl.exe -s -X POST https://glp.gdnparcel.com/api/v1/shipping/rates -H "Content-Type: application/json" --data "@fixtures/glp-rate-request.json"
+#
+# If GLP connectivity ever breaks via the public hostname, GLP runs on the same box under
+# C:\SpringApps\pdsv2 - point at its local port instead, e.g.
+#   https://glp.gdnparcel.com  ->  http://localhost:<glp-port>
+#
+# Expected: HTTP 200, single-element JSON array (captured live 2026-07-15):
 #   [{"FreightCost":"22.92","FuelSurcharge":"5.73","TotalFreightCost":"28.65",
 #     "DutyValue":"0.00","VatValue":"0.00","TotalTaxesDuties":"0.00","TotalCost":"28.65",
 #     "CurrencyCode":"USD","BillableWeight":1.11,"BillableWeightUOM":"Pounds",
 #     "DimensionalWeight":1.11}]
-# Note the PascalCase names and string-typed money figures - the adapter's parser handles
-# both (fixtures/glp-rate-live-capture-2026-07-15.md).
+# Note the PascalCase names and string-typed money figures - the adapter's parser handles both.

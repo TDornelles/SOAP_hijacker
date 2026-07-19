@@ -1,24 +1,28 @@
 # Legacy Routing.svc directly (baseline / comparison)
 #
-# Talks straight to the real legacy WCF service, bypassing the adapter. Useful as the
-# "before" baseline and to compare pass-through responses against. Run from the repo root.
+# Talks straight to the real legacy WCF service, bypassing the adapter. Useful as the "before"
+# baseline and to compare pass-through responses against. Run from the repo root.
 #
-# Three quirks of the live endpoint (all captured 2026-07-15, see
+# Three quirks of the live endpoint (captured 2026-07-15, see
 # fixtures/soap-rate-live-capture-2026-07-15.md):
 #   1. Use http:// - the https URL serves the WSDL but answers SOAP POSTs with an empty 404.
 #   2. Use fixtures/rate-request-v26.xml (header-stripped) - the WS-Addressing header in
 #      rate-request.xml makes V2.6 answer an empty 400.
 #   3. The dummy WSKEY gets HTTP 200 + business error "10001 Invalid Account Details".
-#      For a rated (success) response, replace the WSKEY value in a COPY of the fixture
-#      with a valid key. Never commit a real key.
+#      For a rated (success) response, replace the WSKEY value in a COPY of the fixture with a
+#      valid key. Never commit a real key.
 
 # From anywhere (public hostname):
-curl.exe -s -X POST http://pds.gdnparcel.com/Routing/Service/Soap/V2.6/Routing.svc -H "Content-Type: text/xml; charset=utf-8" -H "SOAPAction: \"http://tempuri.org/IRouting/RateLandedCost\"" --data-binary "@fixtures/rate-request-v26.xml"
+$r = Invoke-WebRequest -Uri http://pds.gdnparcel.com/Routing/Service/Soap/V2.6/Routing.svc `
+  -Method Post -ContentType "text/xml; charset=utf-8" `
+  -Headers @{ SOAPAction = "http://tempuri.org/IRouting/RateLandedCost" } `
+  -InFile .\fixtures\rate-request-v26.xml
+$r.Content
 
-# From the server itself, once the PDS 8090 binding exists (this is exactly the origin the
-# adapter's pass-through uses, so it also verifies that binding):
-curl.exe -s -X POST http://localhost:8090/Routing/Service/Soap/V2.6/Routing.svc -H "Content-Type: text/xml; charset=utf-8" -H "SOAPAction: \"http://tempuri.org/IRouting/RateLandedCost\"" --data-binary "@fixtures/rate-request-v26.xml"
-
+# From the server, once the PDS 8090 binding exists (this is the exact origin the adapter's
+# pass-through uses, so it also verifies that binding). Swap the Uri host:port for
+# http://localhost:8090/Routing/Service/Soap/V2.6/Routing.svc
+#
 # Expected (dummy key):  200, MessageEntity Code 10001 "Invalid Account Details", RateEntity nil
 # Expected (valid key):  200, RateEntity populated - baseline was FreightCost 22.92,
 #                        BillableWeight 1.11, Code 00000 "Request Successful"

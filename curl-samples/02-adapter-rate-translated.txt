@@ -1,21 +1,20 @@
 # Adapter: translated Rate operation (SOAP in -> GLP -> SOAP out)
 #
-# Exercises the full hijack path: the adapter parses rData, POSTs the package to GLP's
-# public rates endpoint, and rebuilds the legacy-shaped SOAP response.
-# Run from the repo root (the clone) so the fixture path resolves.
-# WSKEY in the fixture is a dummy - the ADAPTER does not validate it (GLP Rate is public),
-# so the dummy is fine here, unlike against the real legacy service (see 04).
+# Exercises the full hijack path: the adapter parses rData, POSTs the package to GLP's public
+# rates endpoint, and rebuilds the legacy-shaped SOAP response.
+# Run from the repo root (C:\inetpub\SOAP_hijacker) so the fixture path resolves.
+# The dummy WSKEY in the fixture is fine here - the ADAPTER does not validate it (GLP Rate is public).
 
-curl.exe -s -X POST http://localhost:8081/Routing/Service/Soap/V2.6/Routing.svc -H "Content-Type: text/xml; charset=utf-8" -H "SOAPAction: \"http://tempuri.org/IRouting/RateLandedCost\"" --data-binary "@fixtures/rate-request.xml"
+$r = Invoke-WebRequest -Uri http://localhost:8082/Routing/Service/Soap/V2.6/Routing.svc `
+  -Method Post -ContentType "text/xml; charset=utf-8" `
+  -Headers @{ SOAPAction = "http://tempuri.org/IRouting/RateLandedCost" } `
+  -InFile .\fixtures\rate-request.xml
+$r.Content
 
-# bash equivalent:
-#   curl -s -X POST 'http://localhost:8081/Routing/Service/Soap/V2.6/Routing.svc' \
-#     -H 'Content-Type: text/xml; charset=utf-8' \
-#     -H 'SOAPAction: "http://tempuri.org/IRouting/RateLandedCost"' \
-#     --data-binary @fixtures/rate-request.xml
+# (curl.exe --data-binary @file gives HTTP 411 on this box - use Invoke-WebRequest above.)
 #
-# Expected (GLP reachable): HTTP 200, a SOAP envelope shaped like the captured legacy
-# response (fixtures/soap-rate-live-capture-2026-07-15.md):
+# Expected (GLP reachable): HTTP 200, a SOAP envelope shaped like the captured legacy response
+# (fixtures/soap-rate-live-capture-2026-07-15.md). Verified live on the server 2026-07-19:
 #   <RateLandedCostResult>
 #     <a:AccountNumber>3528</a:AccountNumber> ... <a:RateResponseEntries><a:RateResponseEntry>
 #       <a:BoxID>0</a:BoxID>
@@ -26,5 +25,6 @@ curl.exe -s -X POST http://localhost:8081/Routing/Service/Soap/V2.6/Routing.svc 
 # NOTE: FreightCost is GLP's fuel-inclusive TotalFreightCost by design (decided 2026-07-15),
 # so it reads HIGHER than the legacy baseline for the same package (28.65 vs 22.92).
 #
-# Expected (GLP down/unreachable): HTTP 500 with a soap:Server Fault - still proves the
-# operation was hijacked (a pass-through would answer with a legacy response instead).
+# Expected (GLP down/unreachable): HTTP 500 with a soap:Server Fault - still proves the operation
+# was hijacked (a pass-through would answer with a legacy response instead). Invoke-WebRequest
+# throws on 500; wrap in try/catch and read $_.Exception.Response to see the Fault body.
