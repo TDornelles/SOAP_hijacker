@@ -38,6 +38,8 @@ public class EndToEndTests : IClassFixture<EndToEndTests.AdapterFactory>
                 services.AddSingleton<IGlpClient>(Glp);
                 services.RemoveAll<ILegacyForwarder>();
                 services.AddSingleton<ILegacyForwarder>(Legacy);
+                // Don't write audit files during tests.
+                services.Configure<SummitAdapter.Options.AuditOptions>(o => o.Enabled = false);
             });
             return base.CreateHost(builder);
         }

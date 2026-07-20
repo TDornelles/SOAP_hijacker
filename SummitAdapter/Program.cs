@@ -10,6 +10,16 @@ var builder = WebApplication.CreateBuilder(args);
 // secrets in source. "Legacy" points at the relocated origin for pass-through of un-ported ops.
 builder.Services.Configure<GlpOptions>(builder.Configuration.GetSection(GlpOptions.SectionName));
 builder.Services.Configure<LegacyOptions>(builder.Configuration.GetSection(LegacyOptions.SectionName));
+builder.Services.Configure<AuditOptions>(builder.Configuration.GetSection(AuditOptions.SectionName));
+
+// The GLP client stashes its request/response onto the in-flight audit record via HttpContext.
+builder.Services.AddHttpContextAccessor();
+
+// Durable per-call audit log — one JSON line per SOAP call to a daily-rolling file. Registered once
+// and surfaced as both the sink (ICallAudit) and the background writer (IHostedService).
+builder.Services.AddSingleton<CallAudit>();
+builder.Services.AddSingleton<ICallAudit>(sp => sp.GetRequiredService<CallAudit>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<CallAudit>());
 
 // Translator + router components — all stateless, registered as singletons.
 builder.Services.AddSingleton<OperationRegistry>();

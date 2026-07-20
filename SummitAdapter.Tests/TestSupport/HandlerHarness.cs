@@ -21,7 +21,13 @@ public static class HandlerHarness
         new SoapFaultBuilder(),
         glp,
         legacy ?? new FakeLegacyForwarder(),
+        new NoOpCallAudit(),
         NullLogger<SoapHandler>.Instance);
+
+    private sealed class NoOpCallAudit : ICallAudit
+    {
+        public void Write(CallAuditRecord record) { }
+    }
 
     public static async Task<Result> InvokeAsync(
         IGlpClient glp, string body, string? soapAction,

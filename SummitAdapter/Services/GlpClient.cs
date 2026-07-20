@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using SummitAdapter.Dispatch;
 using SummitAdapter.Models;
@@ -21,11 +22,13 @@ public sealed class GlpClient : IGlpClient
 
     private readonly HttpClient _http;
     private readonly GlpOptions _options;
+    private readonly IHttpContextAccessor? _contextAccessor;
 
-    public GlpClient(HttpClient http, IOptions<GlpOptions> options)
+    public GlpClient(HttpClient http, IOptions<GlpOptions> options, IHttpContextAccessor? contextAccessor = null)
     {
         _http = http;
         _options = options.Value;
+        _contextAccessor = contextAccessor;
     }
 
     public async Task<LandedCostResult> SendAsync(
@@ -36,6 +39,7 @@ public sealed class GlpClient : IGlpClient
         using (response)
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            CaptureAudit(request, content, (int)response.StatusCode);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -75,8 +79,48 @@ public sealed class GlpClient : IGlpClient
         using (response)
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            CaptureAudit(request, content, (int)response.StatusCode);
             var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/json";
             return new GlpRawResponse((int)response.StatusCode, contentType, content);
+        }
+    }
+
+    /// <summary>
+    /// Record this GLP leg (request JSON, response body, status) onto the in-flight audit record if
+    /// one is present on the current request. No-ops outside a request (e.g. unit tests) or when
+    /// auditing is off. Never throws — auditing must not affect the GLP call.
+    /// </summary>
+    private void CaptureAudit(PackageRequest request, string responseBody, int status)
+    {
+        try
+        {
+            if (_contextAccessor?.HttpContext?.Items[CallAuditRecord.ItemsKey] is not CallAuditRecord record)
+            {
+                return;
+            }
+
+            record.GlpReq = AsJsonOrString(JsonSerializer.Serialize(request, JsonOptions));
+            record.GlpResp = AsJsonOrString(responseBody);
+            record.GlpStatus = status;
+        }
+        catch
+        {
+            // auditing is best-effort; never let it disturb the request
+        }
+    }
+
+    /// <summary>Parse to a detached <see cref="JsonElement"/> so it embeds as real JSON in the log;
+    /// fall back to the raw string if the body isn't valid JSON.</summary>
+    private static object AsJsonOrString(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.Clone();
+        }
+        catch (JsonException)
+        {
+            return body;
         }
     }
 
